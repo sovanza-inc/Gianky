@@ -1,13 +1,18 @@
 'use client';
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleConnect = async (connector: any) => {
     setIsConnecting(true);
@@ -27,6 +32,17 @@ export default function WalletConnect() {
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
+
+  // Prevent SSR issues
+  if (!isMounted) {
+    return (
+      <div className="flex flex-col items-center space-y-4 p-6 bg-white rounded-lg shadow-md">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (isConnected) {
     return (

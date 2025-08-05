@@ -1,6 +1,6 @@
 import { createConfig, http } from 'wagmi';
 import { mainnet, polygon } from 'wagmi/chains';
-import { walletConnect } from 'wagmi/connectors';
+import { walletConnect } from '@wagmi/connectors';
 
 export const config = createConfig({
   chains: [mainnet, polygon],
