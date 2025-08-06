@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { apiService } from '@/services/api';
 
 interface Card {
   id: number;
@@ -31,12 +33,18 @@ const rewards = [
 ];
 
 export default function WheelPage() {
+  const { address, isConnected } = useAccount();
   const [gameStarted, setGameStarted] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [totalRewards, setTotalRewards] = useState<string[]>([]);
+  const [gameSessionId, setGameSessionId] = useState<string>('');
+  const [isClaimingReward, setIsClaimingReward] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
   // Initialize cards with shuffled rewards
   const initializeCards = () => {
@@ -55,6 +63,12 @@ export default function WheelPage() {
     initializeCards();
     setGameStarted(true);
     setSelectedCard(null);
+    setClaimError(null);
+    setClaimSuccess(null);
+    setTransactionHash(null);
+    
+    // Generate new game session ID
+    setGameSessionId(apiService.generateGameSessionId());
   };
 
   // Handle card click
@@ -79,9 +93,6 @@ export default function WheelPage() {
     setTimeout(() => {
       setShowModal(true);
       
-      // Add reward to total rewards
-      setTotalRewards(prev => [...prev, clickedCard.reward]);
-      
       // Check for high-tier rewards for confetti
       if (clickedCard.reward.includes("💎") || clickedCard.reward.includes("💍") || clickedCard.reward.includes("👑")) {
         setShowConfetti(true);
@@ -90,12 +101,54 @@ export default function WheelPage() {
     }, 600);
   };
 
+  // Claim reward via backend
+  const handleClaimReward = async () => {
+    if (!selectedCard || !address || !isConnected) {
+      setClaimError('Wallet not connected');
+      return;
+    }
+
+    if (!apiService.isAuthenticated()) {
+      setClaimError('Please authenticate your wallet first');
+      return;
+    }
+
+    setIsClaimingReward(true);
+    setClaimError(null);
+
+    try {
+      const response = await apiService.claimReward({
+        reward_type: selectedCard.reward.includes('NFT') ? 'nft' : 'token',
+        reward_value: selectedCard.reward,
+        game_session_id: gameSessionId,
+      });
+
+      if (response.success && response.data) {
+        setClaimSuccess(`Successfully claimed ${selectedCard.reward}!`);
+        setTransactionHash(response.data.transaction_hash || null);
+        
+        // Add reward to total rewards
+        setTotalRewards(prev => [...prev, selectedCard.reward]);
+      } else {
+        setClaimError(response.error || 'Failed to claim reward');
+      }
+    } catch (error) {
+      console.error('Error claiming reward:', error);
+      setClaimError('Failed to claim reward. Please try again.');
+    } finally {
+      setIsClaimingReward(false);
+    }
+  };
+
   // Close modal and reset game
   const closeModal = () => {
     setShowModal(false);
     setGameStarted(false);
     setSelectedCard(null);
     setCards([]);
+    setClaimError(null);
+    setClaimSuccess(null);
+    setTransactionHash(null);
   };
 
   return (
@@ -124,12 +177,34 @@ export default function WheelPage() {
         {/* Play Button (shown when game not started) */}
         {!gameStarted && (
           <div className="text-center mb-8">
-            <button
-              onClick={handlePlayClick}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-12 rounded-lg text-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
-            >
-              🎮 Play
-            </button>
+            {!isConnected ? (
+              <div className="space-y-4">
+                <p className="text-lg text-gray-300">Connect your wallet to play and claim rewards!</p>
+                <button
+                  disabled
+                  className="bg-gray-500 text-white font-bold py-4 px-12 rounded-lg text-2xl cursor-not-allowed opacity-50"
+                >
+                  🎮 Connect Wallet First
+                </button>
+              </div>
+            ) : !apiService.isAuthenticated() ? (
+              <div className="space-y-4">
+                <p className="text-lg text-gray-300">Authenticate your wallet to enable gasless rewards!</p>
+                <button
+                  disabled
+                  className="bg-gray-500 text-white font-bold py-4 px-12 rounded-lg text-2xl cursor-not-allowed opacity-50"
+                >
+                  🔐 Authenticate First
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handlePlayClick}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-12 rounded-lg text-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                🎮 Play & Earn Rewards
+              </button>
+            )}
           </div>
         )}
 
@@ -211,12 +286,72 @@ export default function WheelPage() {
               You won: <span className="font-bold text-purple-600">{selectedCard.reward}</span>
             </p>
             
+            {/* Claim Status */}
+            {claimError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                ❌ {claimError}
+              </div>
+            )}
+            
+            {claimSuccess && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+                ✅ {claimSuccess}
+                {transactionHash && (
+                  <p className="text-xs mt-2">
+                    <a 
+                      href={`https://polygonscan.com/tx/${transactionHash}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="underline hover:text-green-800"
+                    >
+                      View Transaction
+                    </a>
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            {!claimSuccess && isConnected && apiService.isAuthenticated() && (
+              <div className="space-y-3 mb-4">
+                <button
+                  onClick={handleClaimReward}
+                  disabled={isClaimingReward}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isClaimingReward ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Claiming...</span>
+                    </div>
+                  ) : (
+                    '🎁 Claim Reward (Gasless)'
+                  )}
+                </button>
+                <p className="text-xs text-gray-500">
+                  No gas fees required! Reward will be sent to your wallet.
+                </p>
+              </div>
+            )}
+            
+            {!isConnected && (
+              <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                💡 Connect your wallet to claim this reward!
+              </div>
+            )}
+            
+            {isConnected && !apiService.isAuthenticated() && (
+              <div className="mb-4 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                🔐 Authenticate your wallet to claim this reward!
+              </div>
+            )}
+            
             {/* Close Button */}
             <button
               onClick={closeModal}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105"
             >
-              Play Again
+              {claimSuccess ? 'Play Again' : 'Close'}
             </button>
           </div>
         </div>
