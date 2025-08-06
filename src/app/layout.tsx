@@ -1,22 +1,19 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Header from "@/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import type { Metadata } from "next";
+import { Carlito } from "next/font/google";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const carlito = Carlito({
   subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-carlito",
 });
 
 export const metadata: Metadata = {
-  title: "Gianky Web3 Wallet Connect",
-  description: "Web3 wallet connection using WalletConnect in Next.js",
+  title: "Gianky Web3",
+  description: "Connect your wallet to get started with Web3",
 };
 
 export default function RootLayout({
@@ -27,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${carlito.variable} font-carlito antialiased`}
       >
         <Providers>
           <Header />

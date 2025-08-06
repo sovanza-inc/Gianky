@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  walletAddress String @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  games       Game[]
+  rewards     Reward[]
+  
+  @@map("users")
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  userId      String
+  playedAt    DateTime @default(now())
+  rewardWon   String?  // The reward name that was won
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("games")
+}
+
+model Reward {
+  id          String   @id @default(cuid())
+  userId      String
+  rewardName  String   // e.g., "🎯 Starter NFT", "💰 10 Gianky Coin"
+  rewardType  String   // "NFT", "Polygon", "Gianky"
+  rewardValue Int?     // Numeric value for tokens/coins
+  earnedAt    DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("rewards")
+}
