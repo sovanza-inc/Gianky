@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
+    "backend:dev": "cd backend && python app.py",
+    "backend:setup": "cd backend && python scripts/setup.py",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -25,6 +28,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^8.2.2",
     "eslint": "^9",
     "eslint-config-next": "15.4.5",
     "tailwindcss": "^4",
