@@ -3,279 +3,200 @@
  * Handles gasless transactions and reward claims
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
-export interface ApiResponse<T = any> {
+export interface TokenBalance {
   success: boolean;
-  data?: T;
+  balance?: number;
+  balance_human?: number;
+  decimals?: number;
+  symbol?: string;
   error?: string;
 }
 
-export interface WalletConnectRequest {
-  wallet_address: string;
-  signature: string;
-  message: string;
-}
-
-export interface WalletConnectResponse {
+export interface GameEligibility {
   success: boolean;
-  token: string;
-  user: {
-    wallet_address: string;
-    created_at: string;
-    total_rewards: number;
-  };
+  can_play?: boolean;
+  current_balance?: number;
+  required_fee?: number;
+  shortfall?: number;
+  error?: string;
 }
 
-export interface RewardClaimRequest {
-  reward_type: string;
-  reward_value: string;
-  game_session_id: string;
-}
-
-export interface RewardClaimResponse {
+export interface PaymentResult {
   success: boolean;
-  transaction_hash?: string;
-  reward_id: string;
-  message: string;
+  tx_hash?: string;
+  amount_paid?: number;
+  new_balance?: number;
+  error?: string;
 }
 
-export interface UserReward {
-  reward_id: string;
-  reward_type: string;
-  reward_value: string;
-  tx_hash: string;
-  status: string;
-  created_at: string;
-  details?: any;
-}
-
-export interface RewardHistory {
+export interface TokenInfo {
   success: boolean;
-  rewards: UserReward[];
-  total_count: number;
+  contract_address?: string;
+  symbol?: string;
+  decimals?: number;
+  game_fee?: number;
+  error?: string;
+}
+
+export interface GasEstimate {
+  success: boolean;
+  gas_estimate?: number;
+  gas_price?: number;
+  estimated_cost_wei?: number;
+  estimated_cost_eth?: number;
+  error?: string;
+}
+
+export interface UserStats {
+  success: boolean;
+  total_rewards?: number;
+  claimed_rewards?: number;
+  total_transactions?: number;
+  total_nfts?: number;
+  total_games?: number;
+  recent_rewards?: any[];
+  recent_transactions?: any[];
+  error?: string;
+}
+
+export interface RewardDistribution {
+  success: boolean;
+  distribution?: Record<string, number>;
+  error?: string;
+}
+
+export interface GameHistory {
+  day: string;
+  games: number;
+  rewards: number;
+  value: number;
+}
+
+export interface WeeklyProgress {
+  week: string;
+  games: number;
+  rewards: number;
+}
+
+export interface ValueTrend {
+  day: string;
+  value: number;
 }
 
 class ApiService {
   private baseUrl: string;
-  private token: string | null = null;
 
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+  constructor() {
+    this.baseUrl = API_BASE_URL;
+  }
+
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
     
-    // Load token from localStorage on initialization
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('gianky_auth_token');
-    }
-  }
-
-  /**
-   * Set authentication token
-   */
-  setToken(token: string) {
-    this.token = token;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('gianky_auth_token', token);
-    }
-  }
-
-  /**
-   * Clear authentication token
-   */
-  clearToken() {
-    this.token = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('gianky_auth_token');
-    }
-  }
-
-  /**
-   * Get authentication headers
-   */
-  private getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    return headers;
-  }
-
-  /**
-   * Make API request
-   */
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
     try {
-      const url = `${this.baseUrl}${endpoint}`;
-      
       const response = await fetch(url, {
-        ...options,
         headers: {
-          ...this.getAuthHeaders(),
-          ...options.headers,
+          'Content-Type': 'application/json',
+          ...options?.headers,
         },
+        ...options,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || `HTTP ${response.status}`,
-        };
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return {
-        success: true,
-        data,
-      };
+      return await response.json();
     } catch (error) {
-      console.error('API request failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
   }
 
-  /**
-   * Health check
-   */
-  async healthCheck(): Promise<ApiResponse> {
+  // Token Operations
+  async getTokenBalance(walletAddress: string): Promise<TokenBalance> {
+    return this.request<TokenBalance>(`/api/token/balance?wallet_address=${walletAddress}`);
+  }
+
+  async checkGameEligibility(walletAddress: string): Promise<GameEligibility> {
+    return this.request<GameEligibility>(`/api/token/check-eligibility?wallet_address=${walletAddress}`);
+  }
+
+  async payGameFee(walletAddress: string, privateKey: string): Promise<PaymentResult> {
+    return this.request<PaymentResult>('/api/token/pay-game-fee', {
+      method: 'POST',
+      body: JSON.stringify({
+        wallet_address: walletAddress,
+        private_key: privateKey,
+      }),
+    });
+  }
+
+  async getTokenInfo(): Promise<TokenInfo> {
+    return this.request<TokenInfo>('/api/token/info');
+  }
+
+  async estimatePaymentGas(walletAddress: string): Promise<GasEstimate> {
+    return this.request<GasEstimate>(`/api/token/estimate-gas?wallet_address=${walletAddress}`);
+  }
+
+  // User Statistics
+  async getUserStats(walletAddress: string): Promise<UserStats> {
+    return this.request<UserStats>(`/api/user/stats?wallet_address=${walletAddress}`);
+  }
+
+  async getRewardDistribution(walletAddress: string): Promise<RewardDistribution> {
+    return this.request<RewardDistribution>(`/api/user/reward-distribution?wallet_address=${walletAddress}`);
+  }
+
+  async getUserRewards(walletAddress: string): Promise<any> {
+    return this.request(`/api/user/rewards?wallet_address=${walletAddress}`);
+  }
+
+  // Game Operations
+  async createGameSession(walletAddress: string, sessionId: string): Promise<any> {
+    return this.request('/api/game/session', {
+      method: 'POST',
+      body: JSON.stringify({
+        wallet_address: walletAddress,
+        session_id: sessionId,
+      }),
+    });
+  }
+
+  async claimReward(walletAddress: string, rewardType: string, rewardValue: string, gameSessionId: string): Promise<any> {
+    return this.request('/api/rewards/claim', {
+      method: 'POST',
+      body: JSON.stringify({
+        wallet_address: walletAddress,
+        reward_type: rewardType,
+        reward_value: rewardValue,
+        game_session_id: gameSessionId,
+      }),
+    });
+  }
+
+  // Health Check
+  async healthCheck(): Promise<any> {
     return this.request('/health');
   }
 
-  /**
-   * Connect wallet and authenticate
-   */
-  async connectWallet(request: WalletConnectRequest): Promise<ApiResponse<WalletConnectResponse>> {
-    const response = await this.request<WalletConnectResponse>('/api/wallet/connect', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-
-    // Store token if connection successful
-    if (response.success && response.data?.token) {
-      this.setToken(response.data.token);
-    }
-
-    return response;
-  }
-
-  /**
-   * Claim a game reward
-   */
-  async claimReward(request: RewardClaimRequest): Promise<ApiResponse<RewardClaimResponse>> {
-    return this.request<RewardClaimResponse>('/api/rewards/claim', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
-   * Get user's reward history
-   */
-  async getUserRewards(): Promise<ApiResponse<RewardHistory>> {
-    return this.request<RewardHistory>('/api/user/rewards');
-  }
-
-  /**
-   * Mint NFT for user
-   */
-  async mintNFT(nft_type: string, metadata_uri?: string): Promise<ApiResponse> {
-    return this.request('/api/nft/mint', {
-      method: 'POST',
-      body: JSON.stringify({
-        nft_type,
-        metadata_uri,
-      }),
-    });
-  }
-
-  /**
-   * Transfer tokens to user
-   */
-  async transferTokens(token_type: string, amount: number): Promise<ApiResponse> {
-    return this.request('/api/tokens/transfer', {
-      method: 'POST',
-      body: JSON.stringify({
-        token_type,
-        amount,
-      }),
-    });
-  }
-
-  /**
-   * Execute meta-transaction
-   */
-  async executeMetaTransaction(transaction: any, signature: string): Promise<ApiResponse> {
-    return this.request('/api/gasless/meta-transaction', {
-      method: 'POST',
-      body: JSON.stringify({
-        transaction,
-        signature,
-      }),
-    });
-  }
-
-  /**
-   * Estimate gas for transaction
-   */
-  async estimateGas(transaction: any): Promise<ApiResponse> {
-    return this.request('/api/gas/estimate', {
-      method: 'POST',
-      body: JSON.stringify({
-        transaction,
-      }),
-    });
-  }
-
-  /**
-   * Get relayer balance
-   */
-  async getRelayerBalance(): Promise<ApiResponse> {
+  // Relayer Operations
+  async getRelayerBalance(): Promise<any> {
     return this.request('/api/relayer/balance');
   }
 
-  /**
-   * Generate authentication message for wallet signing
-   */
-  generateAuthMessage(walletAddress: string): string {
-    const nonce = Date.now().toString();
-    return `Welcome to Gianky!
-
-Sign this message to authenticate with your wallet.
-
-Wallet: ${walletAddress}
-Nonce: ${nonce}
-Timestamp: ${new Date().toISOString()}
-
-This request will not trigger a blockchain transaction or cost any gas fees.`;
-  }
-
-  /**
-   * Generate unique game session ID
-   */
-  generateGameSessionId(): string {
-    return `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  isAuthenticated(): boolean {
-    return !!this.token;
+  // Gas Operations
+  async estimateGas(transactionData: any): Promise<any> {
+    return this.request('/api/gas/estimate', {
+      method: 'POST',
+      body: JSON.stringify({
+        transaction: transactionData,
+      }),
+    });
   }
 }
 
-// Export singleton instance
 export const apiService = new ApiService();
-
-// Export types for use in components
-export type { ApiResponse, WalletConnectRequest, WalletConnectResponse, RewardClaimRequest, RewardClaimResponse, UserReward, RewardHistory };

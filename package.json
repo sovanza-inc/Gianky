@@ -7,6 +7,9 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
     "backend:dev": "cd backend && python app.py",
     "backend:setup": "cd backend && python scripts/setup.py",
+    "backend:db:migrate": "cd backend && python scripts/migrate_database.py",
+    "backend:db:setup": "cd backend && python scripts/setup_database.py",
+    "backend:db:reset": "cd backend && python scripts/migrate_database.py --reset",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -19,6 +22,7 @@
     "next": "15.4.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "recharts": "^3.1.2",
     "viem": "^2.33.2",
     "wagmi": "^2.16.1"
   },

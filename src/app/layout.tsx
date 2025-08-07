@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Carlito } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Header from "@/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const carlito = Carlito({
+  weight: ["400", "700"],
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-carlito",
 });
 
 export const metadata: Metadata = {
@@ -25,9 +21,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="light">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${carlito.variable} antialiased bg-white font-carlito`}
       >
         <Providers>
           <Header />
