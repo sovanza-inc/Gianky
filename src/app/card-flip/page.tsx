@@ -205,91 +205,64 @@ export default function CardFlipPage() {
     setPaymentError('');
     
     try {
-      // Determine reward type and amount
-      let rewardType: string;
-      let rewardAmount: number = 0;
+      // Since backend is not deployed, we'll simulate the gasless flow
+      // In a real implementation, this would call the backend API
       
-      if (selectedCard.reward.includes('NFT')) {
-        rewardType = 'NFT';
-      } else if (selectedCard.reward.includes('Polygon')) {
-        rewardType = 'Polygon';
-        rewardAmount = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
-      } else if (selectedCard.reward.includes('Gianky')) {
-        rewardType = 'Gianky';
-        rewardAmount = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
-      } else {
-        throw new Error('Unknown reward type');
-      }
+      // For now, we'll just reveal the card without backend processing
+      setPaymentStatus('paid');
+      setTotalRewards(prev => [...prev, selectedCard.reward]);
+      setCardRevealed(true);
       
-      // Process gasless payment (NO META MASK CONFIRMATION!)
-      const result: GaslessPaymentResult = await gaslessService.processGamePayment(
-        address,
-        rewardType,
-        rewardAmount,
-        selectedCard.reward
-      );
-      
-      if (result.success) {
-        // Success! Payment and reward processed automatically
-        setPaymentStatus('paid');
-        setTotalRewards(prev => [...prev, selectedCard.reward]);
-        setCardRevealed(true);
+      // Record game activity in localStorage
+      if (selectedCard) {
+        const rewardType = selectedCard.reward.includes('NFT') ? 'NFT' : 
+                         selectedCard.reward.includes('Polygon') ? 'Polygon' : 'Gianky';
+        const rewardValue = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
         
-        // Record game activity in localStorage
-        if (selectedCard) {
-          const rewardType = selectedCard.reward.includes('NFT') ? 'NFT' : 
-                           selectedCard.reward.includes('Polygon') ? 'Polygon' : 'Gianky';
-          const rewardValue = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
-          
-          localStorageService.recordGameActivity({
-            reward: selectedCard.reward,
-            rewardType,
-            rewardValue,
-            cardId: selectedCard.id,
-            success: true,
-          });
-        }
-        
-        // NOW flip the card to reveal the reward
-        console.log('Flipping card to reveal reward:', selectedCard.reward);
-        setCards(prevCards => {
-          const updatedCards = prevCards.map(card => 
-            card.id === selectedCard.id 
-              ? { ...card, isFlipped: true }
-              : card
-          );
-          console.log('Updated cards:', updatedCards);
-          return updatedCards;
+        localStorageService.recordGameActivity({
+          reward: selectedCard.reward,
+          rewardType,
+          rewardValue,
+          cardId: selectedCard.id,
+          success: true,
         });
+      }
       
-      // Check for high-tier rewards for confetti
-        if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
-      }
-        
-        // Start countdown timer
-        setTimeLeft(15);
-        const countdownInterval = setInterval(() => {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval);
-              closeModalAndPlayAgain();
-              return 15;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-      } else {
-        setPaymentStatus('failed');
-        setPaymentError(result.error || 'Payment failed. Please try again.');
-      }
+      // NOW flip the card to reveal the reward
+      console.log('Flipping card to reveal reward:', selectedCard.reward);
+      setCards(prevCards => {
+        const updatedCards = prevCards.map(card => 
+          card.id === selectedCard.id 
+            ? { ...card, isFlipped: true }
+            : card
+        );
+        console.log('Updated cards:', updatedCards);
+        return updatedCards;
+      });
+    
+    // Check for high-tier rewards for confetti
+      if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
+      
+      // Start countdown timer
+      setTimeLeft(15);
+      const countdownInterval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            closeModalAndPlayAgain();
+            return 15;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       
     } catch (error) {
       console.error('Gasless payment error:', error);
       setPaymentStatus('failed');
-      setPaymentError('Transaction failed. Please try again.');
+      setPaymentError('Backend not available. Please use direct payment instead.');
     }
   };
 
