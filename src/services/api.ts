@@ -179,12 +179,12 @@ class ApiService {
   }
 
   // Health Check
-  async healthCheck(): Promise<any> {
+  async healthCheck(): Promise<unknown> {
     return this.request('/health');
   }
 
   // Relayer Operations
-  async getRelayerBalance(): Promise<any> {
+  async getRelayerBalance(): Promise<unknown> {
     return this.request('/api/relayer/balance');
   }
 
