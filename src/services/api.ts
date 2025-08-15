@@ -56,8 +56,8 @@ export interface UserStats {
   total_transactions?: number;
   total_nfts?: number;
   total_games?: number;
-  recent_rewards?: any[];
-  recent_transactions?: any[];
+  recent_rewards?: string[];
+  recent_transactions?: unknown[];
   error?: string;
 }
 
@@ -151,12 +151,12 @@ class ApiService {
     return this.request<RewardDistribution>(`/api/user/reward-distribution?wallet_address=${walletAddress}`);
   }
 
-  async getUserRewards(walletAddress: string): Promise<any> {
+  async getUserRewards(walletAddress: string): Promise<unknown> {
     return this.request(`/api/user/rewards?wallet_address=${walletAddress}`);
   }
 
   // Game Operations
-  async createGameSession(walletAddress: string, sessionId: string): Promise<any> {
+  async createGameSession(walletAddress: string, sessionId: string): Promise<unknown> {
     return this.request('/api/game/session', {
       method: 'POST',
       body: JSON.stringify({
@@ -166,7 +166,7 @@ class ApiService {
     });
   }
 
-  async claimReward(walletAddress: string, rewardType: string, rewardValue: string, gameSessionId: string): Promise<any> {
+  async claimReward(walletAddress: string, rewardType: string, rewardValue: string, gameSessionId: string): Promise<unknown> {
     return this.request('/api/rewards/claim', {
       method: 'POST',
       body: JSON.stringify({
@@ -179,17 +179,17 @@ class ApiService {
   }
 
   // Health Check
-  async healthCheck(): Promise<any> {
+  async healthCheck(): Promise<unknown> {
     return this.request('/health');
   }
 
   // Relayer Operations
-  async getRelayerBalance(): Promise<any> {
+  async getRelayerBalance(): Promise<unknown> {
     return this.request('/api/relayer/balance');
   }
 
   // Gas Operations
-  async estimateGas(transactionData: any): Promise<any> {
+  async estimateGas(transactionData: unknown): Promise<unknown> {
     return this.request('/api/gas/estimate', {
       method: 'POST',
       body: JSON.stringify({

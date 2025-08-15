@@ -480,7 +480,7 @@ export default function CardFlipPage() {
               <p className="text-gray-600 font-carlito mb-6">Connect your wallet to claim rewards!</p>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm text-yellow-700 font-carlito">
-                  💡 You can still play the game, but rewards won't be saved without a connected wallet.
+                  💡 You can still play the game, but rewards won&apos;t be saved without a connected wallet.
                 </p>
               </div>
             </div>
@@ -500,7 +500,7 @@ export default function CardFlipPage() {
                 <div className="text-center">
                   <div className="text-2xl mb-2">🎉</div>
                   <h4 className="font-bold text-green-600 mb-1 font-carlito">All Cards Revealed!</h4>
-                  <p className="text-sm text-green-700 font-carlito mb-2">You've collected all the rewards!</p>
+                  <p className="text-sm text-green-700 font-carlito mb-2">You&apos;ve collected all the rewards!</p>
                   <button
                     onClick={() => {
                       initializeCards();

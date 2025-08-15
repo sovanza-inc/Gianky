@@ -1,6 +1,6 @@
 'use client';
 
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
 import { useState, useEffect } from 'react';
 
 function WalletConnectInner() {
@@ -11,10 +11,10 @@ function WalletConnectInner() {
 
 
 
-  const handleConnect = async (connector: any) => {
+  const handleConnect = async (connector: Connector) => {
     setIsConnecting(true);
     try {
-      await connect({ connector });
+      connect({ connector });
     } catch (error) {
       console.error('Connection failed:', error);
     } finally {
