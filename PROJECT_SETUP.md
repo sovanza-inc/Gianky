@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-Gianky is a Web3 gaming platform with gasless transactions. Players can play the wheel game and claim rewards (NFTs, tokens) without paying gas fees through meta-transactions.
+Gianky is a Web3 gaming platform with gasless transactions. Players can play the card flip game and claim rewards (NFTs, tokens) without paying gas fees through meta-transactions.
 
 ## 🏗️ Architecture
 
@@ -152,7 +152,7 @@ Access:
 
 1. **Connect Wallet**: User connects wallet (MetaMask, WalletConnect)
 2. **Authenticate**: User signs message for backend authentication
-3. **Play Game**: User plays the 15-card wheel game
+3. **Play Game**: User plays the 15-card flip game
 4. **Win Reward**: User selects a card and wins a reward
 5. **Claim Gasless**: User claims reward without gas fees via backend
 

@@ -14,24 +14,24 @@ function HeaderInner() {
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14">
-          <div className="flex items-center space-x-8">
+        <div className="flex justify-between items-center h-12">
+          <div className="flex items-center space-x-6">
             <Link href="/" className="text-xl font-bold text-gray-800 hover:text-purple-600 transition-colors font-carlito">
-              Gianky Web3
+              <img src="/gianky_logo.svg" alt="Gianky Logo" className="w-12 h-12" />
             </Link>
             
-            <nav className="flex space-x-6">
+            <nav className="flex space-x-4">
               <Link 
                 href="/" 
-                className="text-gray-600 hover:text-purple-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito"
+                className="text-gray-600 hover:text-purple-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito whitespace-nowrap"
               >
                 Home
               </Link>
               <Link 
-                href="/wheel" 
-                className="text-gray-600 hover:text-purple-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito"
+                href="/card-flip" 
+                className="text-gray-600 hover:text-purple-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito whitespace-nowrap"
               >
-                Wheel
+                Card Flip
               </Link>
             </nav>
           </div>
@@ -64,24 +64,24 @@ export default function Header() {
     return (
       <header className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
-            <div className="flex items-center space-x-8">
+                  <div className="flex justify-between items-center h-12">
+          <div className="flex items-center space-x-6">
               <Link href="/" className="text-xl font-bold text-gray-800 hover:text-indigo-600 transition-colors font-carlito">
-                Gianky Web3
+                <img src="/gianky_logo.svg" alt="Gianky Logo" className="w-12 h-12" />
               </Link>
               
-              <nav className="flex space-x-6">
+              <nav className="flex space-x-4">
                 <Link 
                   href="/" 
-                  className="text-gray-600 hover:text-indigo-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito"
+                  className="text-gray-600 hover:text-indigo-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito whitespace-nowrap"
                 >
                   Home
                 </Link>
                 <Link 
-                  href="/wheel" 
-                  className="text-gray-600 hover:text-indigo-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito"
+                  href="/card-flip" 
+                  className="text-gray-600 hover:text-indigo-600 px-2 py-1 rounded text-sm font-medium transition-colors font-carlito whitespace-nowrap"
                 >
-                  Wheel
+                  Card Flip
                 </Link>
               </nav>
             </div>
