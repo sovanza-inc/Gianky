@@ -4,7 +4,7 @@
   "main": "admin-wallet-service.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
+    "start": "node start-server.js",
     "dev": "node start-server.js",
     "generate-wallet": "node generate-wallet.js"
   },
