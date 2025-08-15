@@ -11,10 +11,10 @@ function WalletConnectInner() {
 
 
 
-  const handleConnect = async (connector: any) => {
+  const handleConnect = async (connector: unknown) => {
     setIsConnecting(true);
     try {
-      await connect({ connector });
+      connect({ connector });
     } catch (error) {
       console.error('Connection failed:', error);
     } finally {

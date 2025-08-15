@@ -35,8 +35,8 @@ interface UserStats {
   total_transactions?: number;
   total_nfts?: number;
   total_games?: number;
-  recent_rewards?: any[];
-  recent_transactions?: any[];
+  recent_rewards?: string[];
+  recent_transactions?: unknown[];
   error?: string;
 }
 
@@ -61,9 +61,9 @@ function DashboardInner() {
 
   // Add token to wallet functions
   const addTokenToWallet = async (tokenType: 'nft' | 'gianky') => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
+    if (typeof window !== 'undefined' && (window as unknown as { ethereum?: { request: (params: unknown) => Promise<unknown> } }).ethereum) {
       try {
-        const ethereum = (window as any).ethereum;
+        const ethereum = (window as unknown as { ethereum: { request: (params: unknown) => Promise<unknown> } }).ethereum;
         
         if (tokenType === 'nft') {
           // Add NFT collection to MetaMask
