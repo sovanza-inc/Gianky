@@ -43,7 +43,7 @@ Game complete!
 ## 🔧 **Technical Implementation**
 
 ### **Frontend Changes:**
-- `src/app/wheel/page.tsx`: Simplified to user-paid system only
+- `src/app/card-flip/page.tsx`: Simplified to user-paid system only
 - `src/services/contractService.ts`: Added `payGameFeeFromUser()` method
 - `src/lib/contracts.ts`: Added admin wallet address
 

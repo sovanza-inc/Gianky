@@ -317,7 +317,7 @@ function DashboardInner() {
             <h3 className="text-lg font-bold text-gray-800 mb-4 font-carlito">Quick Actions</h3>
             <div className="space-y-3">
               <Link 
-                href="/wheel" 
+                href="/card-flip" 
                 className={`block w-full font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 font-carlito text-center ${
                   gameEligibility?.success && gameEligibility.can_play
                     ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
