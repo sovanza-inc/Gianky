@@ -1,6 +1,6 @@
 'use client';
 
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, type Connector } from 'wagmi';
 import { useState, useEffect } from 'react';
 
 function WalletConnectInner() {
@@ -11,7 +11,7 @@ function WalletConnectInner() {
 
 
 
-  const handleConnect = async (connector: unknown) => {
+  const handleConnect = async (connector: Connector) => {
     setIsConnecting(true);
     try {
       connect({ connector });
