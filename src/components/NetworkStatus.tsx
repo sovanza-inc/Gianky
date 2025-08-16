@@ -99,7 +99,7 @@ export default function NetworkStatus({ onNetworkCheck }: NetworkStatusProps) {
               Wrong Network Detected
             </h4>
             <p className="text-red-700 text-sm">
-              You're connected to <strong>{networkInfo.networkName}</strong> (Chain ID: {networkInfo.chainId}), 
+              You&apos;re connected to <strong>{networkInfo.networkName}</strong> (Chain ID: {networkInfo.chainId}), 
               but Gianky requires <strong>Polygon Mainnet</strong> (Chain ID: 137).
             </p>
           </div>

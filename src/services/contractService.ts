@@ -451,7 +451,7 @@ class ContractService {
   }> {
     try {
       // Check if MetaMask is available
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
+      if (typeof window === 'undefined' || !(window as Window & { ethereum?: unknown }).ethereum) {
         return {
           chainId: 0,
           networkName: 'No Wallet',
@@ -460,7 +460,7 @@ class ContractService {
         };
       }
 
-      const ethereum = (window as any).ethereum;
+      const ethereum = (window as Window & { ethereum: { request: (params: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
       
       // Get current chain ID
       const chainId = await ethereum.request({ method: 'eth_chainId' });
@@ -534,7 +534,7 @@ class ContractService {
     error?: string;
   }> {
     try {
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
+      if (typeof window === 'undefined' || !(window as Window & { ethereum?: unknown }).ethereum) {
         return {
           success: false,
           message: 'MetaMask not found. Please install MetaMask first.',
@@ -542,7 +542,7 @@ class ContractService {
         };
       }
 
-      const ethereum = (window as any).ethereum;
+      const ethereum = (window as Window & { ethereum: { request: (params: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum;
       
       // Try to switch to Polygon Mainnet
       await ethereum.request({
@@ -555,12 +555,12 @@ class ContractService {
         message: 'Successfully switched to Polygon Mainnet! 🎉'
       };
       
-          } catch (switchError: any) {
+          } catch (switchError: unknown) {
         // This error code indicates that the chain has not been added to MetaMask
-        if (switchError.code === 4902) {
+        if (switchError && typeof switchError === 'object' && 'code' in switchError && switchError.code === 4902) {
           try {
             // Add Polygon Mainnet to MetaMask
-            await (window as any).ethereum.request({
+            await (window as Window & { ethereum: { request: (params: { method: string; params?: unknown[] }) => Promise<unknown> } }).ethereum.request({
               method: 'wallet_addEthereumChain',
               params: [{
                 chainId: '0x89', // 137 in hex
