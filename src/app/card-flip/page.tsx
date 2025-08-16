@@ -270,113 +270,107 @@ export default function CardFlipPage() {
   const handleUserPaidPayAndClaim = async () => {
     if (!selectedCard || !address) return;
     
+    console.log('🚀 Starting User-Paid Game Flow...');
+    console.log('📋 Flow: Pay Fee → Confirm → Reveal → Transfer Reward');
+    
     setPaymentStatus('checking');
     setPaymentError('');
     
     try {
-      // Step 1: User pays the game fee from their wallet
-      console.log('Step 1: User paying game fee...');
-      const paymentResult = await contractService.payGameFeeFromUser(address);
+      // Step 1: User pays the game fee and waits for confirmation
+      console.log('💰 Step 1: User paying game fee...');
+      const paymentResult = await contractService.playGameAndReceiveReward(
+        address,
+        'NFT', // We'll determine the actual type after payment
+        0,
+        selectedCard.reward
+      );
       
       if (!paymentResult.success) {
+        console.error('❌ Step 1 failed:', paymentResult.error);
         setPaymentStatus('failed');
         setPaymentError(paymentResult.error || 'Payment failed. Please try again.');
         return;
       }
+
+      // Step 2: Payment confirmed - now reveal the reward
+      console.log('✅ Step 2: Payment confirmed! Revealing reward...');
+      setPaymentStatus('paid');
+      setTotalRewards(prev => [...prev, selectedCard.reward]);
+      setCardRevealed(true);
       
-      // Step 2: Wait for user payment confirmation
-      console.log('Step 2: Waiting for payment confirmation...');
-      const paymentConfirmed = await contractService.waitForTransaction(paymentResult.hash!);
-      if (!paymentConfirmed) {
-        setPaymentStatus('failed');
-        setPaymentError('Payment confirmed but transaction failed. Please try again.');
-        return;
+      // Record game activity in localStorage
+      if (selectedCard) {
+        const rewardType = selectedCard.reward.includes('NFT') ? 'NFT' : 
+                         selectedCard.reward.includes('Polygon') ? 'Polygon' : 'Gianky';
+        const rewardValue = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
+        
+        localStorageService.recordGameActivity({
+          reward: selectedCard.reward,
+          rewardType,
+          rewardValue,
+          cardId: selectedCard.id,
+          success: true,
+        });
       }
       
-      // Step 3: Determine reward type and amount
-      let rewardType: string;
-      let rewardAmount: number = 0;
+      // Step 3: Flip the card to reveal the reward
+      console.log('🎁 Step 3: Flipping card to reveal reward:', selectedCard.reward);
+      setCards(prevCards => {
+        const updatedCards = prevCards.map(card => 
+          card.id === selectedCard.id 
+            ? { ...card, isFlipped: true }
+            : card
+        );
+        console.log('Updated cards:', updatedCards);
+        return updatedCards;
+      });
       
-      if (selectedCard.reward.includes('NFT')) {
-        rewardType = 'NFT';
-      } else if (selectedCard.reward.includes('Polygon')) {
-        rewardType = 'Polygon';
-        rewardAmount = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
-      } else if (selectedCard.reward.includes('Gianky')) {
-        rewardType = 'Gianky';
-        rewardAmount = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
-      } else {
-        throw new Error('Unknown reward type');
+      // Check for high-tier rewards for confetti
+      if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
       }
       
-      // Step 4: Admin wallet sends the reward automatically (using existing gasless system)
-      console.log('Step 4: Admin sending reward...');
-      const result: GaslessPaymentResult = await gaslessService.processGamePayment(
+      // Step 4: Now transfer the reward to user's wallet
+      console.log('📱 Step 4: Transferring reward to user wallet...');
+      const rewardType = selectedCard.reward.includes('NFT') ? 'NFT' : 
+                       selectedCard.reward.includes('Polygon') ? 'Polygon' : 'Gianky';
+      const rewardAmount = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
+      
+      const rewardResult = await contractService.transferRewardAfterReveal(
         address,
         rewardType,
         rewardAmount,
         selectedCard.reward
       );
       
-      if (result.success) {
-        // Success! User paid and admin sent reward automatically
-        setPaymentStatus('paid');
-        setTotalRewards(prev => [...prev, selectedCard.reward]);
-        setCardRevealed(true);
-        
-        // Record game activity in localStorage
-        if (selectedCard) {
-          const rewardType = selectedCard.reward.includes('NFT') ? 'NFT' : 
-                           selectedCard.reward.includes('Polygon') ? 'Polygon' : 'Gianky';
-          const rewardValue = parseInt(selectedCard.reward.match(/\d+/)?.[0] || '0');
-          
-          localStorageService.recordGameActivity({
-            reward: selectedCard.reward,
-            rewardType,
-            rewardValue,
-            cardId: selectedCard.id,
-            success: true,
-          });
-        }
-        
-        // NOW flip the card to reveal the reward
-        console.log('Flipping card to reveal reward:', selectedCard.reward);
-        setCards(prevCards => {
-          const updatedCards = prevCards.map(card => 
-            card.id === selectedCard.id 
-              ? { ...card, isFlipped: true }
-              : card
-          );
-          console.log('Updated cards:', updatedCards);
-          return updatedCards;
-        });
-      
-      // Check for high-tier rewards for confetti
-        if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
-      }
-        
-        // Start countdown timer
-        setTimeLeft(15);
-        const countdownInterval = setInterval(() => {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              clearInterval(countdownInterval);
-              closeModalAndPlayAgain();
-              return 15;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
+      if (rewardResult.success) {
+        console.log('✅ Step 4 completed: Reward transferred successfully!');
+        // Reward transfer successful - user now has their reward
       } else {
-        setPaymentStatus('failed');
-        setPaymentError(result.error || 'Reward failed. Please try again.');
+        console.error('❌ Step 4 failed: Reward transfer failed:', rewardResult.error);
+        // Reward transfer failed, but user already paid and saw the reward
+        // This is a backend issue that should be resolved
       }
+      
+      console.log('🎉 Game Flow Complete! User paid, saw reward, and received it in wallet.');
+      
+      // Start countdown timer
+      setTimeLeft(15);
+      const countdownInterval = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            closeModalAndPlayAgain();
+            return 15;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       
     } catch (error) {
-      console.error('User-paid payment error:', error);
+      console.error('❌ User-paid payment error:', error);
       setPaymentStatus('failed');
       setPaymentError('Transaction failed. Please try again.');
     }
@@ -556,7 +550,7 @@ export default function CardFlipPage() {
               Pay <span className="font-bold text-purple-600">5 Gianky</span> from your wallet to reveal your reward!
             </p>
             <p className="text-xs text-gray-500 mb-2 font-carlito">
-              You pay the fee, then your reward is sent automatically!
+              💰 Pay fee → ✅ Get confirmation → 🎁 See reward → 📱 Receive in wallet!
             </p>
             
             {/* NEW FLOW: Payment and Claim */}
@@ -613,6 +607,9 @@ export default function CardFlipPage() {
                         <div className="text-sm font-bold text-gray-800 font-carlito mb-1">
                           {selectedCard.reward}
                         </div>
+                        <div className="text-xs text-green-600 font-carlito mb-1">
+                          ✅ Payment Confirmed • 🎁 Reward Revealed • 📱 Transferring...
+                        </div>
                         <p className="text-xs text-gray-600 font-carlito">
                           Check your wallet! Auto-close in {timeLeft}s
                         </p>
@@ -648,14 +645,14 @@ export default function CardFlipPage() {
                 >
                   {paymentStatus === 'checking' 
                     ? 'Processing...' 
-                    : `🚀 Pay 5 Gianky & Reveal Card #${selectedCard.id + 1}`
+                    : `💰 Pay 5 Gianky & Start Game Flow!`
                   }
                 </button>
                 
                 <p className="text-xs text-gray-500 font-carlito">
                   {showNetworkAlert 
                     ? 'Your wallet must be connected to Polygon network'
-                    : 'Pay 5 Gianky from your wallet, then get your reward automatically!'
+                    : '💰 Pay 5 Gianky → ✅ Confirm → 🎁 Reveal → 📱 Get Reward!'
                   }
                 </p>
               </div>

@@ -19,6 +19,7 @@ export interface TransactionResult {
   success: boolean;
   hash?: string;
   error?: string;
+  message?: string;
 }
 
 class ContractService {
@@ -276,6 +277,206 @@ class ContractService {
     } catch (error) {
       console.error('Error waiting for transaction:', error);
       return false;
+    }
+  }
+
+  /**
+   * Complete user-paid game flow: User pays fee, then admin sends reward automatically
+   */
+  async playGameAndReceiveReward(
+    walletAddress: string, 
+    rewardType: 'NFT' | 'Polygon' | 'Gianky',
+    rewardAmount?: number,
+    rewardString?: string
+  ): Promise<TransactionResult> {
+    try {
+      const account = getAccount(config);
+      if (!account.address) {
+        throw new Error('No wallet connected');
+      }
+
+      // Step 1: User pays the game fee to admin wallet
+      console.log('Step 1: User paying game fee to admin wallet...');
+      const feeResult = await this.payGameFeeFromUser(walletAddress);
+      if (!feeResult.success) {
+        return feeResult;
+      }
+
+      // Step 2: Wait for fee payment confirmation
+      console.log('Step 2: Waiting for fee payment confirmation...');
+      const feeConfirmed = await this.waitForTransaction(feeResult.hash!);
+      if (!feeConfirmed) {
+        return {
+          success: false,
+          error: 'Fee payment failed. Please try again.',
+        };
+      }
+
+      // Step 3: Payment confirmed - reward can now be revealed
+      console.log('Step 3: Payment confirmed! Reward can be revealed.');
+      return {
+        success: true,
+        hash: feeResult.hash, // Return fee transaction hash
+        message: 'Payment confirmed! Reward will be transferred after reveal.',
+      };
+
+    } catch (error) {
+      console.error('Error in game payment flow:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Transfer reward to user after payment confirmation and reward reveal
+   */
+  async transferRewardAfterReveal(
+    walletAddress: string,
+    rewardType: 'NFT' | 'Polygon' | 'Gianky',
+    rewardAmount?: number,
+    rewardString?: string
+  ): Promise<TransactionResult> {
+    try {
+      console.log('Transferring reward to user after reveal...');
+      let rewardResult: TransactionResult;
+
+      if (rewardType === 'NFT') {
+        // Mint NFT to user
+        rewardResult = await this.mintNFT(walletAddress, rewardString || '🎯 Starter NFT');
+      } else if (rewardType === 'Gianky') {
+        // Transfer Gianky tokens from admin wallet to user
+        rewardResult = await this.transferTokensFromAdmin(walletAddress, rewardAmount || 0, 'gianky');
+      } else if (rewardType === 'Polygon') {
+        // Transfer MATIC from admin wallet to user
+        rewardResult = await this.transferTokensFromAdmin(walletAddress, rewardAmount || 0, 'polygon');
+      } else {
+        return {
+          success: false,
+          error: 'Unknown reward type',
+        };
+      }
+
+      if (!rewardResult.success) {
+        return rewardResult;
+      }
+
+      // Wait for reward transfer confirmation
+      console.log('Waiting for reward transfer confirmation...');
+      const rewardConfirmed = await this.waitForTransaction(rewardResult.hash!);
+      if (!rewardConfirmed) {
+        return {
+          success: false,
+          error: 'Reward transfer failed. Please try again.',
+        };
+      }
+
+      // Success! Reward transferred
+      return {
+        success: true,
+        hash: rewardResult.hash,
+        message: 'Reward transferred successfully!',
+      };
+
+    } catch (error) {
+      console.error('Error transferring reward:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Send reward from admin wallet to user (called after user pays game fee)
+   */
+  async sendRewardFromAdmin(
+    userAddress: string,
+    rewardType: 'NFT' | 'Polygon' | 'Gianky',
+    rewardAmount?: number,
+    rewardString?: string
+  ): Promise<TransactionResult> {
+    try {
+      // This method is called by the admin wallet service
+      // The admin wallet must be connected to execute this
+      
+      if (rewardType === 'NFT') {
+        // Mint NFT to user
+        return await this.mintNFT(userAddress, rewardString || '🎯 Starter NFT');
+      } else if (rewardType === 'Gianky') {
+        // Transfer Gianky tokens from admin wallet to user
+        return await this.transferTokensFromAdmin(userAddress, rewardAmount || 0, 'gianky');
+      } else if (rewardType === 'Polygon') {
+        // For MATIC, we need to use the gasless service since it's native token
+        // This will be handled by the backend admin wallet service
+        return {
+          success: false,
+          error: 'MATIC rewards handled by backend service',
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Unknown reward type',
+        };
+      }
+
+    } catch (error) {
+      console.error('Error sending reward from admin:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Transfer tokens from admin wallet to user (admin wallet must approve this)
+   */
+  async transferTokensFromAdmin(
+    userAddress: string, 
+    amount: number, 
+    tokenType: 'polygon' | 'gianky'
+  ): Promise<TransactionResult> {
+    try {
+      const account = getAccount(config);
+      if (!account.address) {
+        throw new Error('No wallet connected');
+      }
+
+      // For this to work, the admin wallet must have approved the user or contract
+      // to spend tokens on their behalf, or we need to use a different approach
+      
+      if (tokenType === 'gianky') {
+        // Transfer Gianky tokens from admin wallet to user
+        const tokenAmount = parseEther(amount.toString());
+        
+        const hash = await writeContract(config, {
+          address: CONTRACTS.TOKEN_CONTRACT as `0x${string}`,
+          abi: TOKEN_ABI,
+          functionName: 'transfer',
+          args: [userAddress as `0x${string}`, tokenAmount],
+        });
+
+        return {
+          success: true,
+          hash: hash,
+        };
+      } else {
+        // For MATIC, we need to use a different approach since it's native token
+        // This would require the admin wallet to send MATIC directly
+        return {
+          success: false,
+          error: 'MATIC transfer requires admin wallet approval',
+        };
+      }
+
+    } catch (error) {
+      console.error('Error transferring tokens from admin:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 }
