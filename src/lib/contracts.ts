@@ -106,6 +106,17 @@ export const NFT_ABI = [
     "type": "function"
   },
   {
+    "constant": false,
+    "inputs": [
+      {"name": "from", "type": "address"},
+      {"name": "to", "type": "address"},
+      {"name": "tokenId", "type": "uint256"}
+    ],
+    "name": "transferFrom",
+    "outputs": [],
+    "type": "function"
+  },
+  {
     "constant": true,
     "inputs": [{"name": "tokenId", "type": "uint256"}],
     "name": "tokenURI",

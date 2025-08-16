@@ -7,6 +7,7 @@ import { gaslessService, GaslessPaymentResult } from '@/services/gaslessService'
 import { localStorageService } from '@/services/localStorageService';
 import { CONTRACTS, GAME_CONFIG, NFT_REWARDS, TOKEN_REWARDS } from '@/lib/contracts';
 import { polygon } from 'wagmi/chains';
+import NetworkStatus from '@/components/NetworkStatus';
 
 // Define local interfaces to avoid API dependency
 interface GameEligibility {
@@ -70,6 +71,8 @@ export default function CardFlipPage() {
   const [showNetworkAlert, setShowNetworkAlert] = useState(false);
   const [cardRevealed, setCardRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15);
+  const [rewardTransferStatus, setRewardTransferStatus] = useState<'pending' | 'success' | 'failed'>('pending');
+  const [rewardTransferError, setRewardTransferError] = useState<string>('');
 
   // Initialize cards with shuffled rewards
   const initializeCards = () => {
@@ -240,11 +243,7 @@ export default function CardFlipPage() {
         return updatedCards;
       });
     
-    // Check for high-tier rewards for confetti
-      if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-    }
+    // Don't show confetti yet - wait for actual reward transfer success
       
       // Start countdown timer
       setTimeLeft(15);
@@ -279,12 +278,7 @@ export default function CardFlipPage() {
     try {
       // Step 1: User pays the game fee and waits for confirmation
       console.log('💰 Step 1: User paying game fee...');
-      const paymentResult = await contractService.playGameAndReceiveReward(
-        address,
-        'NFT', // We'll determine the actual type after payment
-        0,
-        selectedCard.reward
-      );
+      const paymentResult = await contractService.payGameFeeFromUser(address);
       
       if (!paymentResult.success) {
         console.error('❌ Step 1 failed:', paymentResult.error);
@@ -326,11 +320,7 @@ export default function CardFlipPage() {
         return updatedCards;
       });
       
-      // Check for high-tier rewards for confetti
-      if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
-      }
+      // Don't show confetti yet - wait for actual reward transfer success
       
       // Step 4: Now transfer the reward to user's wallet
       console.log('📱 Step 4: Transferring reward to user wallet...');
@@ -347,16 +337,25 @@ export default function CardFlipPage() {
       
       if (rewardResult.success) {
         console.log('✅ Step 4 completed: Reward transferred successfully!');
+          setRewardTransferStatus('success');
         // Reward transfer successful - user now has their reward
+          console.log('🎉 Game Flow Complete! User paid, saw reward, and received it in wallet.');
+          
+          // NOW show confetti for high-tier rewards since they were actually received!
+          if (selectedCard.reward.includes("💎") || selectedCard.reward.includes("💍") || selectedCard.reward.includes("👑")) {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
+          }
       } else {
         console.error('❌ Step 4 failed: Reward transfer failed:', rewardResult.error);
-        // Reward transfer failed, but user already paid and saw the reward
-        // This is a backend issue that should be resolved
-      }
-      
-      console.log('🎉 Game Flow Complete! User paid, saw reward, and received it in wallet.');
-      
-      // Start countdown timer
+          setRewardTransferStatus('failed');
+          setRewardTransferError(rewardResult.error || 'Reward transfer failed');
+          // Reward transfer failed - show error to user
+          console.log('❌ Game Flow Incomplete! User paid and saw reward, but transfer failed.');
+        }
+        
+        // Only start countdown timer if transfer was successful
+        if (rewardTransferStatus === 'success') {
       setTimeLeft(15);
       const countdownInterval = setInterval(() => {
         setTimeLeft(prev => {
@@ -368,6 +367,7 @@ export default function CardFlipPage() {
           return prev - 1;
         });
       }, 1000);
+       }
       
     } catch (error) {
       console.error('❌ User-paid payment error:', error);
@@ -390,6 +390,8 @@ export default function CardFlipPage() {
     setTimeLeft(15);
     setPaymentStatus('idle');
     setPaymentError('');
+    setRewardTransferStatus('pending');
+    setRewardTransferError('');
   };
 
   // Close modal and allow new card selection (after reward is received)
@@ -400,6 +402,8 @@ export default function CardFlipPage() {
     setTimeLeft(15);
     setPaymentStatus('idle');
     setPaymentError('');
+    setRewardTransferStatus('pending');
+    setRewardTransferError('');
     // Don't reset cards - keep the revealed card and allow new selection
   };
 
@@ -433,10 +437,18 @@ export default function CardFlipPage() {
               Click Play to reveal 15 cards, then select one to claim your reward!
             </p>
           </div>
-
-
-
         </div>
+
+        {/* Network Status Check */}
+        {isConnected && (
+          <NetworkStatus 
+            onNetworkCheck={(isCorrect) => {
+              if (!isCorrect) {
+                console.log('⚠️ User is on wrong network - showing warning');
+              }
+            }}
+          />
+        )}
 
                 {/* Wallet Connection Notice */}
         {!isConnected && (
@@ -531,8 +543,8 @@ export default function CardFlipPage() {
 
       {/* Reward Modal */}
       {showModal && selectedCard && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-2 pt-8">
-          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 max-w-sm w-full mx-2 text-center relative animate-fade-in border border-gray-100">
+             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40" style={{ padding: '4rem' }}>
+                               <div className="bg-white rounded-xl shadow-2xl p-2 sm:p-3 max-w-md w-full mx-auto text-center relative animate-fade-in border border-gray-100">
             {/* Close Button */}
             <button
               onClick={closeModal}
@@ -555,7 +567,7 @@ export default function CardFlipPage() {
             
             {/* NEW FLOW: Payment and Claim */}
             {isConnected && (
-              <div className="space-y-3 mb-3">
+               <div className="space-y-2 mb-2">
                 {/* Network Alert */}
                 {showNetworkAlert && (
                   <div className="bg-red-100 border border-red-400 text-red-700 px-2 py-1 rounded text-xs font-carlito mb-2">
@@ -591,35 +603,76 @@ export default function CardFlipPage() {
                 )}
                 
                 {paymentStatus === 'paid' && (
-                  <div className="space-y-2">
+                   <div className="space-y-0.5">
+                                         {/* Payment Success Banner - Always Green when payment is confirmed */}
                     <div className="bg-green-100 border border-green-400 text-green-700 px-2 py-1 rounded text-xs font-carlito">
                       <div className="flex items-center justify-center space-x-1">
                         <span className="text-sm">✅</span>
-                        <span className="text-xs font-semibold">Success!</span>
+                         <span className="text-xs font-semibold">Payment Successful!</span>
+                       </div>
+                     </div>
+                     
+                     {/* Reward Transfer Status - Separate from payment */}
+                     <div className={`px-2 py-1 rounded text-xs font-carlito ${
+                       rewardTransferStatus === 'success' 
+                         ? 'bg-green-100 border border-green-400 text-green-700'
+                         : rewardTransferStatus === 'failed'
+                         ? 'bg-red-100 border border-red-400 text-red-700'
+                         : 'bg-blue-100 border border-blue-400 text-blue-700'
+                     }`}>
+                       <div className="flex items-center justify-center space-x-1">
+                         <span className="text-sm">
+                           {rewardTransferStatus === 'success' ? '🎁' : 
+                            rewardTransferStatus === 'failed' ? '⚠️' : '⏳'}
+                         </span>
+                         <span className="text-xs font-semibold">
+                           {rewardTransferStatus === 'success' ? 'Reward Received!' : 
+                            rewardTransferStatus === 'failed' ? 'Reward Transfer Failed!' : 'Transferring Reward...'}
+                         </span>
                       </div>
                     </div>
                     
-                    {/* Reward Reveal */}
-                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-2">
+                                         {/* Reward Reveal - Ultra Compact */}
+                     <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-1">
                       <div className="text-center">
-                        <div className="text-lg sm:text-xl mb-1">🎉</div>
-                        <h3 className="font-bold text-purple-600 mb-1 text-xs font-carlito">Your Reward from Card #{selectedCard.id + 1}:</h3>
-                        <div className="text-sm font-bold text-gray-800 font-carlito mb-1">
-                          {selectedCard.reward}
+                         <div className="text-base mb-0.5">🎉</div>
+                         <h3 className="font-bold text-purple-600 mb-0.5 text-xs font-carlito">Reward: {selectedCard.reward}</h3>
+                         
+                         {/* Ultra Compact Status Line */}
+                         <div className="text-xs text-green-600 font-carlito mb-0.5">
+                           ✅ Payment • 🎁 Revealed • 📱 {rewardTransferStatus === 'pending' ? 'Transferring...' : rewardTransferStatus === 'success' ? 'Received!' : 'Failed!'}
                         </div>
-                        <div className="text-xs text-green-600 font-carlito mb-1">
-                          ✅ Payment Confirmed • 🎁 Reward Revealed • 📱 Transferring...
+                         
+                         {/* Ultra Compact Transfer Status */}
+                         {rewardTransferStatus === 'pending' && (
+                           <p className="text-xs text-gray-600 font-carlito mb-0.5">
+                             Auto-close in {timeLeft}s
+                           </p>
+                         )}
+                         
+                         {rewardTransferStatus === 'success' && (
+                           <p className="text-xs text-green-600 font-carlito mb-0.5">
+                             🎉 Reward in wallet!
+                           </p>
+                         )}
+                         
+                         {rewardTransferStatus === 'failed' && (
+                           <div className="bg-red-50 border border-red-200 rounded p-0.5 mb-0.5">
+                             <p className="text-xs text-red-700 font-carlito">
+                               ⚠️ <strong>Failed:</strong> {rewardTransferError}
+                             </p>
                         </div>
-                        <p className="text-xs text-gray-600 font-carlito">
-                          Check your wallet! Auto-close in {timeLeft}s
-                        </p>
-                        {/* Countdown Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                          <div 
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-1 rounded-full transition-all duration-1000"
+                         )}
+                         
+                         {/* Ultra Compact Progress Bar */}
+                         {rewardTransferStatus === 'pending' && (
+                           <div className="w-full bg-gray-200 rounded-full h-0.5">
+                             <div 
+                               className="bg-gradient-to-r from-green-500 to-emerald-500 h-0.5 rounded-full transition-all duration-1000"
                             style={{ width: `${(timeLeft / 15) * 100}%` }}
                           ></div>
                         </div>
+                         )}
                       </div>
                     </div>
                     
