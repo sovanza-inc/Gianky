@@ -1,78 +1,96 @@
-# 🎯 User-Paid Game System
+# User-Paid Game System
 
 ## Overview
-The Gianky Game now uses a **user-paid system** where users pay 5 Gianky from their own wallet to play the game.
+The Gianky game now supports a **User-Paid System** where users pay the game fee from their own wallet and immediately receive their rewards automatically.
 
-## 🚀 **User-Paid System Flow**
+## How It Works
 
-### **Step 1: User Payment**
-1. User clicks "Pay 5 Gianky & Reveal Card"
-2. **Wallet popup appears** (MetaMask/other wallet)
-3. User approves the 5 Gianky payment
-4. Payment transfers from user → admin wallet
+### 1. User Pays Game Fee
+- User connects their wallet to the Polygon network
+- User selects a card to flip
+- User pays **5 Gianky tokens** from their wallet to the admin wallet
+- Transaction is confirmed on the blockchain
 
-### **Step 2: Automatic Reward**
-1. Payment confirmation received
-2. **Admin wallet automatically sends reward**
-3. NFT/Token reward sent to user
-4. Card reveals automatically
+### 2. Payment Confirmation
+- Once the fee payment is confirmed, the system acknowledges success
+- User can now see their reward revealed
+- Card flips to show what they won
 
-### **Step 3: Game Complete**
-1. Reward appears in user's wallet
-2. Card shows as revealed
-3. User can play again
+### 3. Reward Reveal
+- The selected card is flipped to reveal the reward
+- User sees exactly what they won (NFT, Gianky tokens, or MATIC)
+- Game state is updated to show the revealed card
 
-## 🎮 **User Experience**
+### 4. Automatic Reward Transfer
+- After the reward is revealed, the admin wallet automatically sends the reward
+- **NFT Rewards**: Minted directly to the user's wallet
+- **Gianky Token Rewards**: Transferred from admin wallet to user
+- **MATIC Rewards**: Sent from admin wallet to user (handled by backend)
+- User receives their reward in their wallet immediately
+
+## Contract Addresses
+
+- **Network**: Polygon Mainnet
+- **Gianky Token Contract**: `0x370806781689e670f85311700445449ac7c3ff7a`
+- **NFT Contract**: `0xdc91E2fD661E88a9a1bcB1c826B5579232fc9898`
+- **Admin Wallet**: `0x3dC4A08a56095186ce7200dEc812a1905b22F662`
+
+## Game Flow
 
 ```
-Click "Pay 5 Gianky" 
-↓
-Wallet popup: "Approve 5 Gianky payment"
-↓
-User clicks "Approve"
-↓
-Payment processes automatically
-↓
-Admin sends reward automatically
-↓
-Card reveals automatically
-↓
-Game complete!
+1. User selects card → 2. User pays 5 Gianky → 3. Payment confirmed → 4. Reward revealed → 5. Reward transferred to wallet
 ```
 
-## 🔧 **Technical Implementation**
+## Reward Types
 
-### **Frontend Changes:**
-- `src/app/card-flip/page.tsx`: Simplified to user-paid system only
-- `src/services/contractService.ts`: Added `payGameFeeFromUser()` method
-- `src/lib/contracts.ts`: Added admin wallet address
+### NFT Rewards
+- 🎯 Starter NFT
+- ⭐ Basic NFT  
+- 🏅 Standard NFT
+- 👑 VIP NFT
+- 💎 Premium NFT
+- 💍 Diamond NFT
 
-### **Backend Changes:**
-- Uses existing reward system (`processGamePayment`)
-- No new endpoints needed
+### Token Rewards
+- 🪙 10/20/25/50 Polygon (MATIC)
+- 💰 10/20/25/30/50 Gianky Coins
 
-### **Key Features:**
-- ✅ **Automatic after user approval** - No manual confirmations needed
-- ✅ **User controls their own funds** - More secure and transparent
-- ✅ **Same reward system** - All existing NFT/token rewards work
-- ✅ **Simple and clean** - No complex toggles or options
+## Technical Implementation
 
-## 🎯 **Benefits**
+### Frontend (React/Next.js)
+- `contractService.playGameAndReceiveReward()` - Handles payment and confirmation
+- `contractService.transferRewardAfterReveal()` - Transfers reward after reveal
+- User pays fee via `payGameFeeFromUser()`
+- Reward transfer happens after payment confirmation and reveal
 
-- 🔒 **More Secure**: Users control their own payments
-- 💰 **Transparent**: Users see exactly what they're paying
-- 🎮 **User Control**: Users decide when to pay
-- ⚡ **Fast**: One wallet approval, then automatic
-- 🎯 **Simple**: No confusing options or toggles
+### Backend (Node.js)
+- `/api/game/process-user-paid-fee` - Acknowledges user payment
+- `/api/rewards/*` - Sends rewards from admin wallet
+- Admin wallet service handles gasless transactions
 
-## 🧪 **Testing**
+### Smart Contracts
+- Gianky token contract for fee collection
+- NFT contract for minting rewards
+- Admin wallet for reward distribution
 
-### **Test User-Paid System:**
-1. Click any card
-2. Click "Pay 5 Gianky & Reveal Card"
-3. Approve wallet transaction
-4. Verify reward is received
+## Benefits
 
-## 🎉 **Success!**
+1. **Immediate Rewards**: No waiting time for reward delivery
+2. **Transparent**: All transactions visible on blockchain
+3. **User Control**: Users pay from their own wallet
+4. **Automatic**: No manual intervention needed
+5. **Secure**: Smart contract-based transactions
 
-The system now provides a **clean, user-controlled payment experience** while keeping all existing functionality intact. Users pay from their own wallet and get rewards automatically!
+## Requirements
+
+- User must have sufficient Gianky tokens (minimum 5)
+- User must be connected to Polygon network
+- User wallet must approve token transfers
+- Admin wallet must have sufficient funds for rewards
+
+## Error Handling
+
+- Insufficient balance: User needs more Gianky tokens
+- Wrong network: User must switch to Polygon
+- Transaction failed: Retry mechanism available
+- Network issues: Clear error messages displayed
